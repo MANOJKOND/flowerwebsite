@@ -1,31 +1,41 @@
 pipeline {
-    agent any  // Run the pipeline on any available Jenkins agent
+    agent any
 
     stages {
-        stage('Checkout') {  // Stage 1: Get the code
+        stage('Checkout') {
             steps {
-                checkout scm // Checkout the code from Git (configured in the job)
+                checkout scm
             }
         }
 
-        stage('Deploy to GitHub Pages') {  // Stage 2: Deploy the website
+        stage('Deploy to GitHub Pages') {
             steps {
-                sh '''
-                    git config --global user.email "kondamanoj9989@gmail.com"  // Set Git email
-                    git config --global user.name "MANOJKOND"  // Set Git name
+                script {
+                    def ghPagesDir = "gh-pages"
 
-                    git init  // Initialize a Git repo (needed for gh-pages branch)
-                    git checkout -b gh-pages  // Create or switch to the gh-pages branch
+                    sh "mkdir -p ${ghPagesDir}"
+                    sh "cp -r * ${ghPagesDir}"
 
-                    rm -rf *  // Remove everything in the gh-pages branch (important!)
+                    dir(ghPagesDir) {
+                        sh '''
+                            git init
+                            git checkout -b gh-pages
 
-                    cp -r * .  // Copy all website files from the workspace to gh-pages
+                            git config --global user.email "kondamanoj9989@gmail.com"
+                            git config --global user.name "MANOJKOND"
 
-                    git add .  // Add all files for commit
-                    git commit -m "Deploy to GitHub Pages"  // Commit the changes
+                            git add .
+                            git commit -m "Deploy to GitHub Pages"
 
-                    git push origin gh-pages -f // Push to gh-pages (force on first run)
-                '''
+                            // Conditional push: force only on the first build
+                            if (env.BUILD_NUMBER == '1') {  // Check if it's the first build
+                                git push origin gh-pages -f
+                            } else {
+                                git push origin gh-pages // Normal push for subsequent builds
+                            }
+                        '''
+                    }
+                }
             }
         }
     }
